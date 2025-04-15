@@ -18,32 +18,35 @@
     <!-- Container for the whole app -->
     <div id="app" class="app-wrapper"> <!-- Renamed outer div for clarity -->
 
+        <!-- Timer Card -->
+        <div class="card timer-card">
+            <h2>实时计时</h2>
+            <div id="timer-display">{{ formattedTime }}</div>
+            <div class="button-controls">
+                <button @click="startTimer" :disabled="isRunning" class="primary-btn">开始</button>
+                <button @click="handleStopReset" :disabled="!isRunning && elapsedTime === 0" class="secondary-btn">
+                    {{ isRunning ? '停止' : '重置' }}
+                </button>
+            </div>
+            <div class="input-group">
+                <input type="text" v-model="currentTeamNumber" placeholder="输入队伍编号" @keyup.enter="handleInputEnter">
+            </div>
+        </div>
+
         <!-- Leaderboard Card -->
         <div class="card leaderboard-card">
-            <h1>排行榜</h1>
+            <h2>排行榜</h2>
             <ul id="time-list">
                 <li v-for="(result, index) in results" :key="index" class="list-item-appear">
-                    <span>队伍 {{ result.team }}</span>
-                    <span>{{ formatTime(result.timeMs) }}</span>
+                    <span class="team-name">队伍 {{ result.team }}</span>
+                    <span class="team-time">{{ formatTime(result.timeMs) }}</span>
                 </li>
                 <li v-if="results.length === 0" class="no-results">暂无记录</li>
             </ul>
         </div>
 
-        <!-- Timer Card -->
-        <div class="card timer-card">
-            <h3>实时计时</h3>
-            <div id="timer-display">{{ formattedTime }}</div>
-            <div class="button-controls">
-                <button @click="startTimer" :disabled="isRunning">开始</button>
-                <button @click="handleStopReset" :disabled="!isRunning && elapsedTime === 0">
-                    {{ isRunning ? '停止' : '重置' }}
-                </button>
-            </div>
-            <input type="text" v-model="currentTeamNumber" placeholder="输入队伍编号" @keyup.enter="handleInputEnter">
-        </div>
-
     </div>
+
 
     <!-- Vue Script (remains the same) -->
     <script>
