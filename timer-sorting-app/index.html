@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Link to CSS file -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <title>排行榜 & 计时器</title>
+    <!-- 1. Include Vue.js -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body>
+    <!-- Container for the whole app -->
+    <div id="app" class="app-wrapper"> <!-- Renamed outer div for clarity -->
+
+        <!-- Leaderboard Card -->
+        <div class="card leaderboard-card">
+            <h1>排行榜</h1>
+            <ul id="time-list">
+                <li v-for="(result, index) in results" :key="index" class="list-item-appear">
+                    <span>队伍 {{ result.team }}</span>
+                    <span>{{ formatTime(result.timeMs) }}</span>
+                </li>
+                <li v-if="results.length === 0" class="no-results">暂无记录</li>
+            </ul>
+        </div>
+
+        <!-- Timer Card -->
+        <div class="card timer-card">
+            <h3>实时计时</h3>
+            <div id="timer-display">{{ formattedTime }}</div>
+            <div class="button-controls">
+                <button @click="startTimer" :disabled="isRunning">开始</button>
+                <button @click="handleStopReset" :disabled="!isRunning && elapsedTime === 0">
+                    {{ isRunning ? '停止' : '重置' }}
+                </button>
+            </div>
+            <input type="text" v-model="currentTeamNumber" placeholder="输入队伍编号" @keyup.enter="handleInputEnter">
+        </div>
+
+    </div>
+
+    <!-- Vue Script (remains the same) -->
+    <script>
+        const { createApp, ref, computed, onUnmounted } = Vue;
+        createApp({
+            setup() {
+                const title = ref('排行榜'); // Title is now within the card
+                const elapsedTime = ref(0);
+                const timerInterval = ref(null);
+                const isRunning = ref(false);
+                const currentTeamNumber = ref('');
+                const results = ref([]);
+                const formattedTime = computed(() => formatTime(elapsedTime.value));
+                const pad = (num) => String(num).padStart(2, '0');
+                const formatTime = (ms) => {
+                    if (typeof ms !== 'number' || ms < 0) { return '00:00:00.00'; }
+                    const totalSeconds = Math.floor(ms / 1000);
+                    const hours = Math.floor(totalSeconds / 3600);
+                    const minutes = Math.floor((totalSeconds % 3600) / 60);
+                    const seconds = totalSeconds % 60;
+                    const centiseconds = Math.floor((ms % 1000) / 10);
+                    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}.${pad(centiseconds)}`;
+                };
+                const addResult = () => {
+                    const team = currentTeamNumber.value.trim() || '未知';
+                    results.value.push({ team: team, timeMs: elapsedTime.value });
+                    results.value.sort((a, b) => a.timeMs - b.timeMs);
+                    currentTeamNumber.value = '';
+                    elapsedTime.value = 0;
+                };
+                const startTimer = () => {
+                    if (isRunning.value) return;
+                    isRunning.value = true;
+                    elapsedTime.value = 0;
+                    const startTime = Date.now();
+                    timerInterval.value = setInterval(() => {
+                        elapsedTime.value = Date.now() - startTime;
+                    }, 50);
+                };
+                const stopAction = () => {
+                    if (!isRunning.value) return;
+                    isRunning.value = false;
+                    clearInterval(timerInterval.value);
+                    timerInterval.value = null;
+                    addResult();
+                };
+                const resetAction = () => {
+                    elapsedTime.value = 0;
+                    currentTeamNumber.value = '';
+                };
+                const handleStopReset = () => {
+                    if (isRunning.value) { stopAction(); }
+                    else { if (elapsedTime.value > 0) { resetAction(); } }
+                };
+                const handleInputEnter = () => { if (isRunning.value) { stopAction(); } };
+                onUnmounted(() => { if (timerInterval.value) { clearInterval(timerInterval.value); } });
+                return {
+                    title, elapsedTime, isRunning, currentTeamNumber, results,
+                    formattedTime, startTimer, handleStopReset, handleInputEnter, formatTime
+                };
+            }
+        }).mount('#app');
+    </script>
+
+</body>
+</html>
