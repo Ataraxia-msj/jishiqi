@@ -29,8 +29,14 @@
                 </button>
             </div>
             <div class="input-group">
-                <input type="text" v-model="currentTeamNumber" placeholder="输入队伍编号" @keyup.enter="handleInputEnter">
+                <input type="text" v-model="currentTeamNumber" placeholder="输入队伍名称" @keyup.enter="handleInputEnter">
             </div>
+
+            <!-- 在这里添加电话号码输入框 -->
+            <div class="input-group" style="margin-top: 10px;"> <!-- 添加一点上边距 -->
+                <input type="tel" v-model="currentPhoneNumber" placeholder="输入电话号码">
+            </div>
+
         </div>
 
         <!-- Leaderboard Card -->
@@ -58,6 +64,7 @@
                 const timerInterval = ref(null);
                 const isRunning = ref(false);
                 const currentTeamNumber = ref('');
+                const currentPhoneNumber = ref(''); // New phone number input
                 const results = ref([]);
                 const formattedTime = computed(() => formatTime(elapsedTime.value));
                 const pad = (num) => String(num).padStart(2, '0');
@@ -70,12 +77,36 @@
                     const centiseconds = Math.floor((ms % 1000) / 10);
                     return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}.${pad(centiseconds)}`;
                 };
+                const downloadCSV = (data) => {
+                    // CSV 头部
+                    let csvContent = "data:text/csv;charset=utf-8,\uFEFF"+"排名,队伍名称,时间,电话号码\n";
+
+                    // 添加数据行
+                    data.forEach((item, index) => {
+                        const rank = index + 1;
+                        const team = `"${item.team.replace(/"/g, '""')}"`; // 处理引号
+                        const time = formatTime(item.timeMs);
+                        const phone = `"${(item.phone || '').replace(/"/g, '""')}"`; // 处理引号并处理空值
+                        csvContent += `${rank},${team},${time},${phone}\n`;
+                    });
+
+                    // 创建下载链接并触发下载
+                    const encodedUri = encodeURI(csvContent);
+                    const link = document.createElement("a");
+                    link.setAttribute("href", encodedUri);
+                    link.setAttribute("download", "排行榜.csv");
+                    document.body.appendChild(link); // Required for Firefox
+                    link.click();
+                    document.body.removeChild(link); // Clean up
+                };
                 const addResult = () => {
                     const team = currentTeamNumber.value.trim() || '未知';
-                    results.value.push({ team: team, timeMs: elapsedTime.value });
+                    const phone = currentPhoneNumber.value.trim() || '未知'; // Use the phone number if provided
+                    results.value.push({ team: team, timeMs: elapsedTime.value, phone: phone });
                     results.value.sort((a, b) => a.timeMs - b.timeMs);
                     currentTeamNumber.value = '';
-                    elapsedTime.value = 0;
+                    currentPhoneNumber.value = ''; // Clear the phone number input after adding
+                    // elapsedTime.value = 0;
                 };
                 const startTimer = () => {
                     if (isRunning.value) return;
@@ -92,10 +123,13 @@
                     clearInterval(timerInterval.value);
                     timerInterval.value = null;
                     addResult();
+                    downloadCSV(results.value); // Download CSV after stopping the timer
+                    elapsedTime.value = 0; // Reset elapsed time after stopping
                 };
                 const resetAction = () => {
                     elapsedTime.value = 0;
                     currentTeamNumber.value = '';
+                    currentPhoneNumber.value = ''; // Clear the phone number input
                 };
                 const handleStopReset = () => {
                     if (isRunning.value) { stopAction(); }
@@ -104,7 +138,7 @@
                 const handleInputEnter = () => { if (isRunning.value) { stopAction(); } };
                 onUnmounted(() => { if (timerInterval.value) { clearInterval(timerInterval.value); } });
                 return {
-                    title, elapsedTime, isRunning, currentTeamNumber, results,
+                    title, elapsedTime, isRunning, currentTeamNumber, currentPhoneNumber, results,
                     formattedTime, startTimer, handleStopReset, handleInputEnter, formatTime
                 };
             }
